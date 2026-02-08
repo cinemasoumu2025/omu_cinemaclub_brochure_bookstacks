@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: "Noto Serif JP", "Hiragino Mincho ProN", serif;
+      background: #f4f1ec;
+      color: #2b2b2b;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      letter-spacing: .15em;
+      border-bottom: 4px solid #3b4a5a;
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+
+    .search-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 6px 12px rgba(0,0,0,.15);
+      margin-bottom: 20px;
+    }
+
+    .section { margin-bottom: 18px; }
+    .keyword-input {
+      width: 60%;
+      max-width: 600px;
+      min-width: 260px;
+      padding: 6px 10px;
+      font-size: 1em;
+    }
+
+    .btn {
+      background: #3b4a5a;
+      color: #fff;
+      border: none;
+      border-radius: 18px;
+      padding: 6px 18px;
+      margin: 4px;
+      cursor: pointer;
+    }
+
+    .btn.secondary { background: #666; }
+
+    .line {
+      border-top: 2px solid #aaa;
+      margin: 20px 0;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 16px;
+      margin: 14px 0;
+      box-shadow: 0 6px 12px rgba(0,0,0,.15);
+    }
+
+    .card .title {
+      font-size: 1.2em;
+      font-weight: bold;
+      border-left: 6px solid #3b4a5a;
+      padding-left: 10px;
+      margin: 6px 0;
+    }
+
+    .card a {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 6px 16px;
+      background: #3b4a5a;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 18px;
+    }
+
+    /* レスポンシブ文字サイズ */
+    @media (max-width: 600px) { body { font-size: 14px; } }
+    @media (min-width: 601px) and (max-width: 820px) { body { font-size: 15px; } }
+    @media (min-width: 821px) and (max-width: 1024px) { body { font-size: 16px; } }
+    @media (min-width: 1025px) and (max-width: 1399px) { body { font-size: 17px; } }
+    @media (min-width: 1400px) { body { font-size: 18px; } }
+  </style>
+</head>
+
+<body>
+<h1>シネマクラブ・過去のパンフレット検索コーナー</h1>
+
+<div class="search-box">
+
+  <!-- 条件リセット＋更新 -->
+  <button class="btn secondary" onclick="refreshAll()">条件をリセットして更新</button>
+
+  <!-- イベント種別 -->
+  <div class="section">
+    <b>イベント種別</b><br>
+    <label><input type="checkbox" value="友好祭" class="event"> 友好祭</label>
+    <label><input type="checkbox" value="白鷺祭" class="event"> 白鷺祭</label>
+    <label><input type="checkbox" value="森之宮" class="event"> 森之宮</label>
+    <label><input type="checkbox" value="その他" class="event"> その他</label>
+  </div>
+
+  <!-- 年 -->
+  <div class="section">
+    <b>年</b><br>
+    <select id="yearFrom"></select>
+    ～
+    <select id="yearTo"></select>
+    <label style="margin-left:10px;">
+      <input type="checkbox" id="allYears"> すべての年
+    </label>
+  </div>
+
+  <!-- パンフレット -->
+  <div class="section">
+    <b>パンフレット種類</b><br>
+    <label><input type="checkbox" value="A" class="pam"> 大人</label>
+    <label><input type="checkbox" value="B" class="pam"> 大人・子ども</label>
+    <label><input type="checkbox" value="C" class="pam"> 子ども</label>
+    <label><input type="checkbox" value="E" class="pam"> 英語版</label>
+    <label><input type="checkbox" value="R" class="pam"> リーフレット</label>
+    <label><input type="checkbox" value="M" class="pam"> 模擬店</label>
+    <label><input type="checkbox" value="T" class="pam"> タイムテーブル</label>
+  </div>
+
+  <!-- キーワード（OR検索のみ） -->
+  <div class="section">
+    <input type="text" id="keyword"  class="keyword-input"placeholder="キーワード（,区切り・OR検索）">
+  </div>
+
+  <!-- 表示件数 -->
+  <div class="section">
+    表示件数
+    <select id="perPage">
+      <option>1</option><option>5</option><option>10</option>
+      <option selected>15</option>
+      <option>50</option><option>100</option><option>200</option>
+    </select>
+    <button class="btn" onclick="search()">検索</button>
+  </div>
+</div>
+
+<div id="info"></div>
+
+<div class="line"></div>
+
+<div>
+  <button class="btn secondary" onclick="prev()">前へ</button>
+  <button class="btn secondary" onclick="next()">次へ</button>
+</div>
+
+<div id="result"></div>
+
+<div class="line"></div>
+
+<div>
+  <button class="btn secondary" onclick="prev()">前へ</button>
+  <button class="btn secondary" onclick="next()">次へ</button>
+</div>
+
+<script>
+let allData = [];
+let page = 1;
+
+ //===== ID =====
+ // ★ 追加（グローバル）
+  const VISIT_KEY = "club_visit_id";
+
+  function getVisitId(){
+  let id = localStorage.getItem(VISIT_KEY);
+  if(!id){
+    id = crypto.randomUUID();
+    localStorage.setItem(VISIT_KEY, id);
+  }
+  return id;
+  }
+
+ const visitId = getVisitId();
+ const PAGE_NAME = "Alca_p";
+
+/* ================================
+   GAS / GitHub 両対応ラッパー
+================================ */
+
+const isGAS = typeof google !== "undefined"
+           && google.script
+           && google.script.run;
+
+/**
+ * GASなら google.script.run
+ * GitHubなら mock 関数
+ */
+function runGAS(method, ...args){
+  if(isGAS){
+    return new Promise((resolve, reject)=>{
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)[method](...args);
+    });
+  }else{
+    // GitHub Pages
+    const paramMap = {
+      getScheduleData: {},
+      getCalendarData: {},
+      getButtonData: { target: args[0], active: args[1] },
+      getRoomStatus: { visitId: args[0] },
+      enterRoom: { visitId: args[0] },
+      exitRoom: { visitId: args[0] },
+      recordViewer: { page: args[0], visitId: args[1] }
+    };
+    return fetchAPI(method, paramMap[method] || {});
+  }
+}
+
+const GAS_API = "https://script.google.com/macros/s/AKfycbyMdd7pI_enuwC57lGRpolm_WZwyKh3K5gY6sQs5O3a2mws3XsX3iCGnSB54nk7pA0/exec";
+
+function fetchAPI(action, params = {}){
+  const url = new URL(GAS_API);
+  url.searchParams.set("action", action);
+
+  Object.entries(params).forEach(([k,v])=>{
+    url.searchParams.set(k, v);
+  });
+
+  return fetch(url.toString())
+    .then(res => res.json());
+}
+
+// ページを開いたら記録
+runGAS("recordViewer", PAGE_NAME, visitId);
+
+
+
+
+
+const PAMPHLET_MAP = {
+  A:"大人向け", B:"大人・子ども共通", C:"子ども向け",
+  E:"英語版", R:"リーフレット", M:"模擬店", T:"タイムテーブル"
+};
+
+// 初期化（年リスト生成）
+function init() {
+  runGAS("getYearList").then(years => {
+    yearFrom.innerHTML = yearTo.innerHTML = "";
+    years.forEach(y => {
+      yearFrom.add(new Option(y + "年", y));
+      yearTo.add(new Option(y + "年", y));
+    });
+    yearFrom.selectedIndex = years.length - 1;
+    yearTo.selectedIndex = 0;
+  });
+}
+
+// 検索
+function search() {
+  const yf = Number(yearFrom.value);
+  const yt = Number(yearTo.value);
+
+  const params = {
+    allYears: allYears.checked,
+    yearFrom: Math.min(yf, yt),
+    yearTo: Math.max(yf, yt),
+    eventTypes: [...document.querySelectorAll(".event:checked")].map(e => e.value),
+    pamphletTypes: [...document.querySelectorAll(".pam:checked")].map(e => e.value),
+    keywords: keyword.value.split(",").map(v => v.trim()).filter(v => v)
+  };
+
+    runGAS("searchData", params).then(data => {
+    allData = data;
+    page = 1;
+    render();
+    });
+
+}
+
+// 描画
+function render() {
+  const per = Number(perPage.value);
+  const start = (page - 1) * per;
+  const view = allData.slice(start, start + per);
+
+  info.textContent =
+    `検索結果 ${allData.length}件　${page}/${Math.ceil(allData.length / per)}ページ`;
+
+  result.innerHTML = "";
+  view.forEach(r => {
+    result.innerHTML += `
+      <div class="card">
+        ${r[1]}年 ${r[2]}月<br>
+        <div class="title">${r[3]}</div>
+        種別：${r[4]}<br>
+        パンフレット：${r[5].split(",").map(p => PAMPHLET_MAP[p]).join("・")}<br>
+        キーワード：${r[6]}<br>
+        <a href="${r[7]}" target="_blank">移動</a>
+      </div>`;
+  });
+}
+
+// ページング
+function prev(){ if(page>1){page--;render();} }
+function next(){
+  const max=Math.ceil(allData.length/Number(perPage.value));
+  if(page<max){page++;render();}
+}
+
+// 条件リセット＋キャッシュクリア＋再構築
+function refreshAll() {
+
+  // 条件リセット
+  document.querySelectorAll(".event,.pam").forEach(e => e.checked = false);
+  allYears.checked = false;
+  keyword.value = "";
+  page = 1;
+
+  // キャッシュクリア → 再取得
+    runGAS("clearCache").then(() => {
+    init();
+    info.textContent = "条件をリセットしてデータを更新しました";
+    result.innerHTML = "";
+    });
+}
+
+init();
+</script>
+</body>
+</html>
