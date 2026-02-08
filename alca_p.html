@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <base target="_top">
   <style>
     body {
       font-family: "Noto Serif JP", "Hiragino Mincho ProN", serif;
@@ -164,16 +165,13 @@
 <script>
 let allData = [];
 let page = 1;
-
-  const paramMap = {
-  getScheduleData: {},
-  getCalendarData: {},
-  getButtonData: { target: args[0], active: args[1] },
-  getRoomStatus: { visitId: args[0] },
-  enterRoom: { visitId: args[0] },
-  exitRoom: { visitId: args[0] },
-  recordViewer: { page: args[0], visitId: args[1] }
-};
+const yearFrom = document.getElementById("yearFrom");
+const yearTo   = document.getElementById("yearTo");
+const allYears = document.getElementById("allYears");
+const keyword  = document.getElementById("keyword");
+const perPage  = document.getElementById("perPage");
+const info     = document.getElementById("info");
+const result   = document.getElementById("result");
 
 
  //===== ID =====
@@ -183,14 +181,16 @@ let page = 1;
   function getVisitId(){
   let id = localStorage.getItem(VISIT_KEY);
   if(!id){
-    id = crypto.randomUUID();
+    id = (crypto.randomUUID?.() || 
+         Date.now().toString(36) + Math.random().toString(36).slice(2));
     localStorage.setItem(VISIT_KEY, id);
   }
   return id;
   }
 
+
  const visitId = getVisitId();
- const PAGE_NAME = "Alca_p";
+ const PAGE_NAME = "alca_p";
 
 /* ================================
    GAS / GitHub 両対応ラッパー
@@ -214,19 +214,16 @@ function runGAS(method, ...args){
   }else{
     // GitHub Pages
     const paramMap = {
-      getScheduleData: {},
-      getCalendarData: {},
-      getButtonData: { target: args[0], active: args[1] },
-      getRoomStatus: { visitId: args[0] },
-      enterRoom: { visitId: args[0] },
-      exitRoom: { visitId: args[0] },
+      getYearList: {},
+      searchData: { params: JSON.stringify(args[0]) },
+      clearCache: {},
       recordViewer: { page: args[0], visitId: args[1] }
     };
     return fetchAPI(method, paramMap[method] || {});
   }
 }
 
-const GAS_API = "https://script.google.com/macros/s/AKfycbyMdd7pI_enuwC57lGRpolm_WZwyKh3K5gY6sQs5O3a2mws3XsX3iCGnSB54nk7pA0/exec";
+const GAS_API = "https://script.google.com/macros/s/AKfycbzAenJvnRKk4KdDAvuCoY9ytUvT294DjWD8Z2nD12njw5x5e0BPQzr3Yg2XE2RZQjM/exec";
 
 function fetchAPI(action, params = {}){
   const url = new URL(GAS_API);
@@ -293,8 +290,10 @@ function render() {
   const start = (page - 1) * per;
   const view = allData.slice(start, start + per);
 
+  const totalPages = Math.max(1, Math.ceil(allData.length / per));
   info.textContent =
-    `検索結果 ${allData.length}件　${page}/${Math.ceil(allData.length / per)}ページ`;
+  `検索結果 ${allData.length}件　${page}/${totalPages}ページ`;
+
 
   result.innerHTML = "";
   view.forEach(r => {
