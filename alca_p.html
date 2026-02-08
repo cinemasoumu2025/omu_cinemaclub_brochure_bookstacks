@@ -165,6 +165,17 @@
 let allData = [];
 let page = 1;
 
+  const paramMap = {
+  getScheduleData: {},
+  getCalendarData: {},
+  getButtonData: { target: args[0], active: args[1] },
+  getRoomStatus: { visitId: args[0] },
+  enterRoom: { visitId: args[0] },
+  exitRoom: { visitId: args[0] },
+  recordViewer: { page: args[0], visitId: args[1] }
+};
+
+
  //===== ID =====
  // ★ 追加（グローバル）
   const VISIT_KEY = "club_visit_id";
