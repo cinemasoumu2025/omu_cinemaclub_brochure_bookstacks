@@ -237,7 +237,8 @@ function fetchAPI(action, params = {}){
 }
 
 // ページを開いたら記録
-runGAS("recordViewer", PAGE_NAME, visitId);
+runGAS("recordViewer", PAGE_NAME, visitId).catch(() => {});
+
 
 
 
